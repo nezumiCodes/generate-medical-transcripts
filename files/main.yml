@@ -1,0 +1,287 @@
+################################################################################
+# This cloudformation template creates:
+# * Amazon S3 bucket for sample audio file
+# * Amazon S3 bucket for transcribed output
+# * Amazon S3 bucket for
+#     - Logs
+################################################################################
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+  "Event Engine CloudFormation team template for 'AWS HealthScribe'"
+
+Metadata:
+  LICENSE: "Apache License, Version 2.0"
+
+Parameters:
+  AssetBucketName:
+    Description: LEAVE BLANK - Assets bucket name
+    Type: String
+  AssetBucketPrefix:
+    Description: LEAVE BLANK - Assets bucket prefix
+    Type: String
+  S3BucketName:
+    Description:
+      "S3 bucket for storing data and logs"
+    Type: "String"
+    Default: "healthscribe"
+    AllowedPattern : "[a-z0-9]+"
+    MinLength: 1
+#  DirsToCreate:
+#    Description: "Comma delimited list of directories to create."
+#    Type: CommaDelimitedList
+#    Default: "audio, output, logs, vocabulary"
+  EventDelivery:
+    Description: "Using WorkShop Studio for Event Delivery."
+    Type: "String"
+    Default: "No"
+    AllowedValues:
+      - "Yes"
+      - "No"
+  ParticipantRoleArn:
+    Description: "The participant role's ARN."
+    Type: "String"
+
+Conditions:
+  WorkshopStudioDeployment: !Equals
+    - !Ref EventDelivery
+    - "Yes"
+
+Resources:
+
+  ##############################################################################
+  # S3 bucket with 3 folders
+  ##############################################################################
+
+  SampleDataS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "sample-data-${AWS::AccountId}-22hcl401"
+  HealthScribeOutputS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join ['-', [!Sub "hs-output-${AWS::AccountId}", !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+  S3CustomResource:
+    Condition: WorkshopStudioDeployment
+    Type: Custom::S3CustomResourcejd
+    Properties:
+      ServiceToken: !GetAtt AWSLambdaFunction.Arn
+      source_bucket: !Ref AssetBucketName
+      assets_key_prefix: !Ref AssetBucketPrefix
+      destination_bucket: !Ref SampleDataS3Bucket
+  AWSLambdaFunction:
+    Condition: WorkshopStudioDeployment
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: "Work with S3 Buckets!"
+      FunctionName: !Sub '${AWS::StackName}-${AWS::Region}-lambda'
+      Handler: index.handler
+      Environment:
+        Variables:
+          ASSET_BUCKET_NAME: !Ref 'AssetBucketName'
+          ASSET_BUCKET_PREFIX: !Ref 'AssetBucketPrefix'
+      Role: !GetAtt AWSLambdaExecutionRole.Arn
+      Timeout: 360
+      Runtime: python3.9
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import os
+
+          s3_client = boto3.client('s3')
+
+          def handler(event, context):
+              # Init ...
+              the_event = event['RequestType']
+              print("The event is: ", str(the_event))
+              response_data = {}
+              s_3 = boto3.client('s3')
+              # Retrieve parameters
+              source_bucket = event['ResourceProperties']['source_bucket']
+              destination_bucket = event['ResourceProperties']['destination_bucket']
+              assets_key_prefix = event['ResourceProperties']['assets_key_prefix']
+              try:
+                  if the_event in ('Create', 'Update'):
+                      source_prefix = f"{assets_key_prefix}"
+                      print(source_prefix)
+                      objects = s3_client.list_objects_v2(Bucket=source_bucket,
+                                                          Prefix=source_prefix,
+                                                          Delimiter="/")
+                      print("Objects")
+                      print(objects["Contents"])
+                      for source in objects["Contents"]:
+                        object_key = source["Key"]
+                        print(object_key)
+                        target_key = object_key.rsplit("/", 1)[-1]
+                        print(target_key)
+                        copy_source = {
+                            "Bucket": source_bucket,
+                            "Key": object_key,
+                        }
+                        print(f"Copying {copy_source} to "
+                            f" {destination_bucket}/{target_key}")
+                        s3_client.copy(
+                            copy_source, destination_bucket, target_key)
+                  elif the_event == 'Delete':
+                      print("Deleting S3 content...")
+                      b_operator = boto3.resource('s3')
+                      b_operator.Bucket(str(destination_bucket)).objects.all().delete()
+                  # Everything OK... send the signal back
+                  print("S3 bucket creation successful!")
+
+                  cfnresponse.send(event,
+                                   context,
+                                   cfnresponse.SUCCESS,
+                                   response_data)
+              except Exception as e:
+                  print("Operation failed...")
+                  print(str(e))
+                  response_data['Data'] = str(e)
+                  cfnresponse.send(event,
+                                   context,
+                                   cfnresponse.FAILED,
+                                   response_data)
+  AWSLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+        Version: '2012-10-17'
+      Path: "/"
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource: arn:aws:logs:*:*:*
+            Version: '2012-10-17'
+          PolicyName: !Sub ${AWS::StackName}-${AWS::Region}-AWSLambda-CW
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:PutObjectTagging
+                  - s3:List*
+                  - s3:Get*
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:s3:::${SampleDataS3Bucket}/*
+                  - !Sub arn:aws:s3:::${SampleDataS3Bucket}
+                  - !Sub arn:aws:s3:::${AssetBucketName}/*
+                  - !Sub arn:aws:s3:::${AssetBucketName}
+            Version: '2012-10-17'
+          PolicyName: !Sub ${AWS::StackName}-${AWS::Region}-AWSLambda-S3
+      RoleName: !Sub ${AWS::StackName}-${AWS::Region}-AWSLambdaExecutionRole
+  
+  ##############################################################################
+  # SageMaker Notebook
+  ##############################################################################
+
+  SageMakerNotebookRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - Fn::Sub: "sagemaker.${AWS::URLSuffix}"
+                - Fn::Sub: "transcribe.${AWS::URLSuffix}"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:PutObjectTagging
+                  - s3:List*
+                  - s3:Get*
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:s3:::${SampleDataS3Bucket}/*
+                  - !Sub arn:aws:s3:::${SampleDataS3Bucket}
+                  - !Sub arn:aws:s3:::${AssetBucketName}/*
+                  - !Sub arn:aws:s3:::${AssetBucketName}
+          PolicyName: !Sub ${AWS::StackName}-${AWS::Region}-SageMaker-S3
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - iam:PassRole
+                Effect: Allow
+                Resource:
+                  - arn:aws:iam::*:role/main-SageMakerNotebookRole-*
+          PolicyName: !Sub ${AWS::StackName}-${AWS::Region}-SageMaker-Notebook
+      ManagedPolicyArns:
+        - Fn::Sub: "arn:${AWS::Partition}:iam::aws:policy/AmazonSageMakerFullAccess"
+        - Fn::Sub: "arn:${AWS::Partition}:iam::aws:policy/AmazonBedrockFullAccess"
+        - Fn::Sub: "arn:${AWS::Partition}:iam::aws:policy/AmazonTranscribeFullAccess"
+        - Fn::Sub: "arn:${AWS::Partition}:iam::aws:policy/ComprehendMedicalFullAccess"
+
+  SageMakerNotebookLifecycle:
+    Type: "AWS::SageMaker::NotebookInstanceLifecycleConfig"
+    Properties:
+      OnCreate:
+        - Content:
+            Fn::Base64:
+              Fn::Sub: |
+                #!/usr/bin/env bash
+                set -e
+                date >> ~/oncreate.txt
+                echo "create AWSome..."
+                git clone "https://github.com/aws-samples/sup-hcls-generate-clinical-notes-with-ai" /home/ec2-user/SageMaker/sup-hcls-generate-clinical-notes-with-ai
+                chown -R ec2-user:ec2-user /home/ec2-user/SageMaker/sup-hcls-generate-clinical-notes-with-ai/
+                touch /etc/profile.d/jupyter-env.sh
+                echo "export S3_BUCKET_NAME=${SampleDataS3Bucket}" >> /etc/profile.d/jupyter-env.sh
+                echo "export OBJECT_NAME=lower-back-consultation.m4a" >> /etc/profile.d/jupyter-env.sh
+                echo "export IAM_ROLE=${SageMakerNotebookRole.Arn}" >> /etc/profile.d/jupyter-env.sh
+                # restart command is dependent on current running Amazon Linux and JupyterLab
+                CURR_VERSION=$(cat /etc/os-release)
+                if [[ $CURR_VERSION == *$"http://aws.amazon.com/amazon-linux-ami/"* ]]; then
+                  sudo initctl restart jupyter-server --no-wait
+                else
+                  sudo systemctl --no-block restart jupyter-server.service
+                fi
+
+      OnStart:
+        - Content:
+            Fn::Base64: |
+              #!/usr/bin/env bash
+              set -e
+              date >> ~/onstart.txt
+              echo "...started AWSomeness"
+
+  SageMakerNotebookInstance:
+    Type: "AWS::SageMaker::NotebookInstance"
+    Properties:
+      InstanceType: "ml.t3.medium"
+      PlatformIdentifier: "notebook-al2-v2"
+      RoleArn:
+        Fn::GetAtt: ["SageMakerNotebookRole", "Arn"]
+      LifecycleConfigName:
+        Fn::GetAtt: ["SageMakerNotebookLifecycle", "NotebookInstanceLifecycleConfigName"]
+
+Outputs:
+  S3SampleDataBucket:
+    Description: "The S3 Bucket to upload sample data to."
+    Value:
+      Ref:
+        SampleDataS3Bucket
+  HealthScribeOutputS3Bucket:
+    Description: "The S3 Bucket for HealthScribe output files"
+    Value:
+      Ref:
+        HealthScribeOutputS3Bucket
