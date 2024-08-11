@@ -6,7 +6,9 @@
 
 ## Audio files
 
-Sample recordings from the paper **Fareez, F., Parikh, T., Wavell, C. et al. A dataset of simulated patient-physician medical interviews with a focus on respiratory cases. Sci Data 9, 313 (2022). https://doi.org/10.1038/s41597-022-01423-1** will be used, and downloaded straight from within the notebook instance using the command `!curl -L --output data.zip https://springernature.figshare.com/ndownloader/files/30598530`.
+Sample recordings from the paper **Fareez, F., Parikh, T., Wavell, C. et al. A dataset of simulated patient-physician medical interviews with a focus on respiratory cases. Sci Data 9, 313 (2022). https://doi.org/10.1038/s41597-022-01423-1** will be used, and downloaded straight from within the notebook instance using the command:
+
+`!curl -L --output data.zip https://springernature.figshare.com/ndownloader/files/30598530`
 
 This file needs to be unzipped, and contains a collection of audio files along with their transcripts. For the purpose of this tutorial, the transcripts will be ignored.
 
