@@ -1,5 +1,12 @@
 # Generating Clinical Notes with AI
 
+![Static Badge - Amazon SageMaker](https://img.shields.io/badge/Amazon_SageMaker-44aa93?style=flat)
+![Static Badge - Amazon Bedrock](https://img.shields.io/badge/Amazon_Bedrock-44aa93?style=flat)
+![Static Badge - Amazon Transcribe](https://img.shields.io/badge/Amazon_Transcribe-44aa93?style=flat)
+![Static Badge - Amazon HealthScribe](https://img.shields.io/badge/AWS_HealthScribe-44aa93?style=flat)
+![Static Badge - Amazon S3](https://img.shields.io/badge/Amazon_S3-67aa3b?style=flat)
+![Static Badge - AWS CloudFormation](https://img.shields.io/badge/AWS_CloudFormation-f54683?style=flat)
+
 This tutorial explores different approaches to transcribe and summarise consultations between patients and healthcare practicioners and how to format the output as clinical notes. These approaches are especially useful during hospital visits and clinical trials as all conversations are autonatically recorded and transcribed, reducing manual labour, and can be revisited and reviewed by healthcare practicioners at any moment. These transcriptions can also be useful to law firms that handle medical negligence cases as it provides more background information and details than written/typed medical documents.
 
 Two different ways of generating clinical documentation will be explored:
