@@ -7,18 +7,18 @@
 ![Static Badge - Amazon S3](https://img.shields.io/badge/Amazon_S3-67aa3b?style=flat)
 ![Static Badge - AWS CloudFormation](https://img.shields.io/badge/AWS_CloudFormation-f54683?style=flat)
 
-This tutorial explores different approaches to transcribe and summarise consultations between patients and healthcare practicioners and how to format the output as clinical notes. These approaches are especially useful during hospital visits and clinical trials as all conversations are autonatically recorded and transcribed, reducing manual labour, and can be revisited and reviewed by healthcare practicioners at any moment. These transcriptions can also be useful to law firms that handle medical negligence cases as it provides more background information and details than written/typed medical documents.
+This tutorial explores different approaches to transcribe and summarise consultations between patients and healthcare practicioners and how to format the output as clinical notes. These approaches are especially useful during hospital visits and clinical trials as all conversations are automatically recorded and transcribed, reducing manual labour, and can be revisited and reviewed by healthcare practicioners at any moment. These transcriptions can also be useful to law firms that handle medical negligence cases as it provides more background information and details than written/typed medical documents.
 
 Two different ways of generating clinical documentation will be explored:
 - Using AWS HealthScribe to automatically identify speaker roles, classify dialogue and extract medical terms to generate preliminary clinical transcripts and notes. The benefit of this API lies in its ability of fast-implementation; no need of using and optimising separate AI services.
-- Using a combination of Amazon Transcribe and Claude 3 generalised LLM family hosted on Amazon Bedrock. This is a great approach if the AWS HealhScribe is not available in the region, and allows for customisation. 
+- Using a combination of Amazon Transcribe and Claude 3 generalised LLM family hosted on Amazon Bedrock. This is a great approach if the AWS HealthScribe is not available in the region, and allows for customisation. 
 
 This tutorial is an adaptation of the <a href="https://catalog.us-east-1.prod.workshops.aws/workshops/989c3aad-3f3e-405f-8519-13552cdd98eb/en-US">AWS workshop on "Generating Clinical Notes with AI"</a>, however it provides more detailed information and images that act as a visual guide, ideal for beginners that want to create simple AI applications on AWS.
 
 ## AWS Regions
 This tutorial has to be run in US East 1 (N. Virginia) given that's the only region currently supporting AWS HealthScribe.
 
-For AWS hoted events, Amazon Bedrock can only be used in US West 2 (Oregon) so Bedrock API calls will be sent to that region by default in our example notebooks.
+For AWS hosted events, Amazon Bedrock can only be used in US West 2 (Oregon) so Bedrock API calls will be sent to that region by default in our example notebooks.
 
 When running the workshop in your own AWS account, follow the cleanup steps at the end of the workshop to avoid incurring additional costs after you complete all the labs.
 
@@ -35,7 +35,7 @@ When running the workshop in your own AWS account, follow the cleanup steps at t
 5. Give a **name** to your stack and **leave the default values for parameters** &rarr; **Next** <br> ![Stack configuration](images/image-2.png)
 6. **Review and create** &rarr; **Accept acknowledgements** &rarr; **Submit** <br> ![Stack creation acknowledgement for IAM Roles](images/image-3.png)
    
-The above template will take a few minutes to complete as it creates S3 buckets for the sample data (in this case audio files) and output (transcription), a SageMaker notebook, source code for transcription, and IAM roles for the Jupyter Notebook execution. When creattion is completed, the stack will change status from `CREATE_IN_PROGRESS` to `CREATE_COMPLETE`, as shown in the images below. You can refresh the stack page to track its progress. <br>
+The above template will take a few minutes to complete as it creates S3 buckets for the sample data (in this case audio files) and output (transcription), a SageMaker notebook, source code for transcription, and IAM roles for the Jupyter Notebook execution. When creation is completed, the stack will change status from `CREATE_IN_PROGRESS` to `CREATE_COMPLETE`, as shown in the images below. You can refresh the stack page to track its progress. <br>
 ![Stack creation in progress](images/image-4.png)<br>
 ![Stack creation complete](images/image-6.png)
 
@@ -52,7 +52,7 @@ As mentioned above, the stack template will create IAM roles for the SageMaker J
 
 1. Navigate to **IAM** (this is a global service, no need to switch regions)
 2. Select **Roles** &rarr; Search for the cloud formation stack template by name (in my case the name is `generate-clinical-notes`) &rarr; Choose the `xxxx-SageMakerNotebookRule-xxxx` role <br> ![Finding SageMakerNotebookRule within IAM roles](images/image-9.png)
-3. Click on **Add Permissions** and create **Inline Policy** <br>![Create inline polict steps](images/image-10.png)
+3. Click on **Add Permissions** and create **Inline Policy** <br>![Create inline policy steps](images/image-10.png)
 4. Search for **IAM** &rarr; Search and Select **PassRole** &rarr; Select **All** under **Resources** <br> ![Add PassRole permission to SageMakerNotebookRule role](images/image-11.png)
 5. Add a **policy name** &rarr; **Create policy** <br> ![Create policy final steps](images/image-12.png)
 
