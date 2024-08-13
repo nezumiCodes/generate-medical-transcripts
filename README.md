@@ -7,7 +7,7 @@
 ![Static Badge - Amazon S3](https://img.shields.io/badge/Amazon_S3-67aa3b?style=flat)
 ![Static Badge - AWS CloudFormation](https://img.shields.io/badge/AWS_CloudFormation-f54683?style=flat)
 
-This tutorial explores different approaches to transcribe and summarise consultations between patients and healthcare practicioners and how to format the output as clinical notes. These approaches are especially useful during hospital visits and clinical trials as all conversations are automatically recorded and transcribed, reducing manual labour, and can be revisited and reviewed by healthcare practicioners at any moment. These transcriptions can also be useful to law firms that handle medical negligence cases as it provides more background information and details than written/typed medical documents.
+This tutorial explores different approaches to transcribe and summarise consultations between patients and healthcare practicioners and how to format the output as clinical notes. These approaches are especially useful during hospital visits and clinical trials as all conversations are automatically recorded and transcribed, reducing manual labour, and can be revisited and reviewed by healthcare practitioners at any moment. These transcriptions can also be useful to law firms that handle medical negligence cases as it provides more background information and details than written/typed medical documents.
 
 Two different ways of generating clinical documentation will be explored:
 - Using AWS HealthScribe to automatically identify speaker roles, classify dialogue and extract medical terms to generate preliminary clinical transcripts and notes. The benefit of this API lies in its ability of fast-implementation; no need of using and optimising separate AI services.
